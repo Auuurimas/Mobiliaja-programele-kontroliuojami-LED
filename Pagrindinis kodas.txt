@@ -1,0 +1,201 @@
+package com.test.led.led_test;
+
+import android.content.Context;
+import android.net.Uri;
+import android.os.AsyncTask;
+import android.support.constraint.ConstraintLayout;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
+import android.os.StrictMode;
+import android.support.constraint.ConstraintLayout;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import com.google.firebase.appindexing.Action;
+import com.google.firebase.appindexing.FirebaseUserActions;
+import com.google.firebase.appindexing.Indexable;
+import com.google.firebase.appindexing.builders.Actions;
+import android.content.Context;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import yuku.ambilwarna.AmbilWarnaDialog;
+public class Led_Test extends AppCompatActivity {
+    Context context;
+    private EditText ipAddress;
+    private Button ledOn, ledOff;
+    byte[] buf = new byte[1024];//used to sending information to esp is a form of byte
+    ConstraintLayout mLayout;
+    Button btnChoose;
+    int mDefaultColor;
+    Boolean l1,l2,l3,turn;
+
+    //private GoogleApiClient client;
+
+    @SuppressLint("WrongViewCast")
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_led__test);
+
+        ipAddress = (EditText) findViewById(R.id.edit_ip);
+        ledOn = (Button) findViewById(R.id.btn_ledOn);
+        ledOff = (Button) findViewById(R.id.btn_ledOff);
+
+        mLayout = (ConstraintLayout) findViewById(R.id.layout);
+        mDefaultColor = ContextCompat.getColor(this, R.color.colorPrimary);
+        btnChoose = (Button) findViewById(R.id.btnChoose);
+        //setContentView(R.layout.activity_main);
+        //setContentView(R.layout.activity_main);
+        l1 = l2 = l3 = turn = true;
+        context = this;
+
+        //client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+
+    }
+
+    public void pasirinkti_spalva(View v) {
+        AmbilWarnaDialog colorPicker = new AmbilWarnaDialog(this, mDefaultColor, new AmbilWarnaDialog.OnAmbilWarnaListener() {
+            @Override
+            public void onCancel(AmbilWarnaDialog dialog) {
+
+            }
+
+            @Override
+            public void onOk(AmbilWarnaDialog dialog, int color) {
+                mDefaultColor = color;
+                mLayout.setBackgroundColor(mDefaultColor);
+            }
+        });
+        colorPicker.show();
+
+    }
+    public void buttonClick(View view){
+        String ledStatus;
+
+        if(ipAddress.getText().toString().equals(""))
+            Toast.makeText(Led_Test.this, "Praðome ávest IP adresà", Toast.LENGTH_SHORT).show();
+        else{
+            if(view == ledOn)
+                ledStatus = "1";
+            else
+                ledStatus = "0";
+            String serverAddress = ipAddress.getText().toString() + ":" + "80";
+            HttpRequestTask requestTask = new HttpRequestTask(serverAddress);
+            requestTask.execute(ledStatus);
+
+        }
+    }
+
+    @Override
+    public void onStart(){
+        super.onStart();
+        //FirebaseAppIndex.getInstance().update(getIndexable());
+        //FirebaseUserActions.getInstance().start(getAction());
+    }
+
+    @Override
+    public void onStop(){
+
+        super.onStop();
+        //FirebaseUserActions.getInstance().end(getAction());
+    }
+
+    private class HttpRequestTask extends AsyncTask<String, Void, String>{
+        private String serverAddress;
+        private String serverResponse;
+        private AlertDialog dialog;
+
+        public HttpRequestTask(String serverAddress){
+            this.serverAddress = serverAddress;
+
+            dialog = new AlertDialog.Builder(context)
+                    .setTitle("HTTP Response From Ip Address : ")
+                    .setCancelable(true)
+                    .create();
+        }
+
+        @Override
+        protected String doInBackground(String... params){
+            dialog.setMessage("Duomenys iðsiøsti, laukiama atsakymo ið serverio");
+
+            if(!dialog.isShowing())
+                dialog.show();
+
+            String val = params[0];
+            final String url = "http://" + serverAddress + "/led/" + val;
+
+            try {
+                HttpClient client = new DefaultHttpClient();
+                HttpGet getRequest = new HttpGet();
+                getRequest.setURI(new URI(url));
+                HttpResponse response = client.execute(getRequest);
+
+                InputStream inputStream = null;
+                inputStream = response.getEntity().getContent();
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream)) ;
+                serverResponse = bufferedReader.readLine();
+                inputStream.close();
+            }
+            catch (URISyntaxException e){
+                e.printStackTrace();
+                serverResponse = e.getMessage();
+            } catch (ClientProtocolException e){
+                e.printStackTrace();
+                serverResponse = e.getMessage();
+            } catch (IOException e) {
+                e.printStackTrace();
+                serverResponse = e.getMessage();
+            }
+
+            return serverResponse;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+           dialog.setMessage(serverResponse);
+
+           if(!dialog.isShowing())
+               dialog.show();
+        }
+
+        @Override
+        protected void onPreExecute() {
+            dialog.setMessage("Siunèiame duomenis á serverá, praðome palaukti");
+
+            if(!dialog.isShowing())
+                dialog.show();
+        }
+    }
+}
