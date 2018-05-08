@@ -7,4 +7,4 @@ Nariai: Aurimas Lenkauskas,
         Jurgis Urbonas,
         Modestas Paulauskas.
         
-Šioje duomenų saugykloje yra sukurti atskiri "breach", kuriuose yra surūšiuoti visi projekto metu sukurti failai.         
+Šioje duomenų saugykloje yra sukurti atskiri "branch", kuriuose yra surūšiuoti visi projekto metu sukurti failai.         
